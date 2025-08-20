@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGPU Checker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            background-color: #1a202c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #2d3748;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid #4a5568;
+        }
+
+        .header {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #cbd5e0 0%, #63b3ed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .description {
+            font-size: 1.1rem;
+            color: #a0aec0;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .description a {
+            color: #63b3ed;
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: border-color 0.2s ease;
+        }
+
+        .description a:hover {
+            border-bottom-color: #63b3ed;
+        }
+
+        .status-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            border-radius: 12px;
+            background: #1a202c;
+            border: 2px solid #4a5568;
+            transition: all 0.3s ease;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 1.1rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .available {
+            color: #38a169;
+        }
+
+        .available .status-dot {
+            background-color: #38a169;
+            box-shadow: 0 0 10px rgba(56, 161, 105, 0.4);
+        }
+
+        .unavailable {
+            color: #e53e3e;
+        }
+
+        .unavailable .status-dot {
+            background-color: #e53e3e;
+            box-shadow: 0 0 10px rgba(229, 62, 62, 0.4);
+        }
+
+        .loading {
+            color: #63b3ed;
+        }
+
+        .loading .status-dot {
+            background-color: #63b3ed;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .result-message {
+            padding: 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .gpu-message {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            border: 2px solid #38a169;
+        }
+
+        .cpu-message {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+            color: white;
+            border: 2px solid #dd6b20;
+        }
+
+        .browser-note {
+            background: #2d3748;
+            border: 2px solid #805ad5;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .header {
+                font-size: 2rem;
+            }
+
+            .status-item {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">WebGPU Checker</h1>
+        <p class="description">
+            Check if your browser supports WebGPU and 16-bit floating-point values for optimal performance on <a href="https://withsubtitles.com" target="_blank" rel="noopener noreferrer">withsubtitles.com</a>
+        </p>
+
+        <div class="status-container">
+            <div class="status-item">
+                <span class="status-label">WebGPU Support</span>
+                <div class="status-indicator loading" id="webgpu-status">
+                    <span class="status-dot"></span>
+                    <span>Checking...</span>
+                </div>
+            </div>
+
+            <div class="status-item">
+                <span class="status-label">16-bit Float Support</span>
+                <div class="status-indicator loading" id="f16-status">
+                    <span class="status-dot"></span>
+                    <span>Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-message hidden" id="result-message"></div>
+        <div class="browser-note hidden" id="browser-note">
+            <strong>Note:</strong> <a href="https://withsubtitles.com" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">withsubtitles.com</a> works best on a Chromium-based browser like Chrome, Brave, Opera, Edge, etc.
+        </div>
+    </div>
+
+    <script>
+        async function checkWebGPUSupport() {
+            const webgpuStatus = document.getElementById('webgpu-status');
+            const f16Status = document.getElementById('f16-status');
+            const resultMessage = document.getElementById('result-message');
+            const browserNote = document.getElementById('browser-note');
+
+            let webgpuAvailable = false;
+            let f16Available = false;
+
+            // Check WebGPU availability
+            try {
+                webgpuAvailable = !!navigator.gpu;
+
+                if (webgpuAvailable) {
+                    webgpuStatus.className = 'status-indicator available';
+                    webgpuStatus.innerHTML = '<span class="status-dot"></span><span>Available</span>';
+                } else {
+                    webgpuStatus.className = 'status-indicator unavailable';
+                    webgpuStatus.innerHTML = '<span class="status-dot"></span><span>Unavailable</span>';
+                }
+            } catch (error) {
+                webgpuStatus.className = 'status-indicator unavailable';
+                webgpuStatus.innerHTML = '<span class="status-dot"></span><span>Unavailable</span>';
+            }
+
+            // Check 16-bit float support
+            try {
+                if (webgpuAvailable) {
+                    const adapter = await navigator.gpu.requestAdapter();
+                    f16Available = adapter?.features.has('shader-f16') || false;
+
+                    if (f16Available) {
+                        f16Status.className = 'status-indicator available';
+                        f16Status.innerHTML = '<span class="status-dot"></span><span>Available</span>';
+                    } else {
+                        f16Status.className = 'status-indicator unavailable';
+                        f16Status.innerHTML = '<span class="status-dot"></span><span>Unavailable</span>';
+                    }
+                } else {
+                    f16Status.className = 'status-indicator unavailable';
+                    f16Status.innerHTML = '<span class="status-dot"></span><span>Unavailable</span>';
+                }
+            } catch (error) {
+                f16Status.className = 'status-indicator unavailable';
+                f16Status.innerHTML = '<span class="status-dot"></span><span>Unavailable</span>';
+            }
+
+            // Show result message
+            if (webgpuAvailable && f16Available) {
+                resultMessage.className = 'result-message gpu-message';
+                resultMessage.innerHTML = '🚀 <a href="https://withsubtitles.com" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">withsubtitles.com</a> should run on GPU';
+            } else {
+                resultMessage.className = 'result-message cpu-message';
+                resultMessage.innerHTML = '⚠️ <a href="https://withsubtitles.com" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">withsubtitles.com</a> will run on CPU';
+            }
+            resultMessage.classList.remove('hidden');
+
+            // Check if browser is Chromium-based
+            const isChromiumBased = !!navigator.userAgentData && navigator.userAgentData.brands.some(data => data.brand == 'Chromium');
+
+            if (!isChromiumBased) {
+                browserNote.classList.remove('hidden');
+            }
+        }
+
+        // Run the check when the page loads
+        document.addEventListener('DOMContentLoaded', checkWebGPUSupport);
+    </script>
+</body>
+</html>
